@@ -160,8 +160,6 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
-
-
     private static void placeMines()
     {
         Random r = new Random();
@@ -226,8 +224,7 @@ class MineSweeper extends JFrame implements ActionListener
 
     public static Color buttonTextColor(int col, int row)
     {
-        Color color = color_list.get(board[col][row]);
-        return color;
+        return color_list.get(board[col][row]);
     }
 
     //check and 'press' every button around the 0 if its not a bomb.
