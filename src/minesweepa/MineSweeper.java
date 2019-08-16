@@ -1,9 +1,6 @@
 package minesweepa;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import javax.swing.*;
@@ -28,30 +25,34 @@ class MineSweeper extends JFrame implements ActionListener
     private static final int MINE_VAL = 101;
     private static final int NUM_MINES = 2;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
-    private static int BLOCKS_LEFT = NUM_BLOCKS;
-    private static final int winxpos = 400, winypos = 120;
+    private static final int win_x_pos = 400, win_y_pos = 120;
     private static final int win_x_size = 400, win_y_size = 400;
-    private static final int pop_wid = 100, pop_hght = 100;
+    private static int BLOCKS_LEFT = NUM_BLOCKS;
+    private static int winLabel_wid, winLabel_hght, lossLabel_wid, lossLabel_hght;
 
     private static final String NewGameStr = "New Game";
     private static final String QuitStr = "Quit";
     private static final String TitleBarDflt = "MineSweeper";
+    private static final String OkStr = "Ok";
+
+    private static boolean firstClick = true;
 
     private static Map<Integer, Color> color_list = new HashMap<Integer, Color>();
 
     private final Font regfont = new Font("TimesRoman", Font.BOLD, 15);
 
     private static JFrame frame = new JFrame(TitleBarDflt);
-    private static JFrame popframe = new JFrame(TitleBarDflt);
 
     private static JButton[] button = new JButton[horzsqs * vertsqs];
-    private JButton newgame, Exit, engGame;
+    private JButton newgame, Exit, WinGame, LoseGame;
 
-    private JPanel northpanel, nlleft, nright, centerpanel, poppanel;
-    private JTextArea minesleft, outputarea, EndgameMsg;
+    private static JPanel northpanel, nlleft, nright, centerpanel, WinGamePanel, LoseGamePanel;
+    private static JTextArea minesleft, outputarea;
+    private static JLabel winLabel, lossLabel;
 
-    PopupFactory win_msg;
-    Popup pop;
+    private static PopupFactory end_msg;
+    private static Popup pop;
+    private static Dimension Win_dimension, loss_dimension;
 
     public static void main(String[] args)
     {
@@ -63,7 +64,7 @@ class MineSweeper extends JFrame implements ActionListener
         frame = this;
         frame.setLayout(new BorderLayout());
         frame.setSize(win_x_size, win_y_size);
-        frame.setLocation(winxpos, winypos);
+        frame.setLocation(win_x_pos, win_y_pos);
         frame.setResizable(false);
         frame.setTitle(TitleBarDflt);
 
@@ -115,8 +116,32 @@ class MineSweeper extends JFrame implements ActionListener
         color_list.put(7, Color.orange);
         color_list.put(8, Color.red);
 
-        placeMines();
-        //int col = 0, row = 0;
+        end_msg = new PopupFactory();
+        winLabel = new JLabel("YOU WIN!");
+        winLabel.setFont(new Font("BOLD", Font.BOLD, 24));
+        Win_dimension = winLabel.getPreferredSize();
+        winLabel_hght = Win_dimension.height;
+        winLabel_wid = Win_dimension.width;
+        WinGame = new JButton(OkStr);
+        WinGame.addActionListener(this);
+        WinGamePanel = new JPanel();
+        WinGamePanel.setBackground(Color.red);
+        WinGamePanel.add(winLabel);
+        WinGamePanel.add(WinGame);
+        WinGamePanel.setLayout(new GridLayout(2, 1));
+
+        lossLabel = new JLabel("YOU LOSE!");
+        lossLabel.setFont(new Font("BOLD", Font.BOLD, 24));
+        loss_dimension = lossLabel.getPreferredSize();
+        lossLabel_hght = loss_dimension.height;
+        lossLabel_wid = loss_dimension.width;
+        LoseGame = new JButton(OkStr);
+        LoseGame.addActionListener(this);
+        LoseGamePanel = new JPanel();
+        LoseGamePanel.setBackground(Color.white);
+        LoseGamePanel.add(lossLabel);
+        LoseGamePanel.add(LoseGame);
+        LoseGamePanel.setLayout(new GridLayout(2, 1));
 
         for (int i = 0; i < NUM_BLOCKS; i++)
         {
@@ -143,7 +168,6 @@ class MineSweeper extends JFrame implements ActionListener
                 System.exit(0);
             }
         });
-        printBoardtoConsole();
     }
 
     private static void printBoardtoConsole()
@@ -160,7 +184,7 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
-    private static void placeMines()
+    private static void placeMines(int i, int j)
     {
         Random r = new Random();
         int x2, y2;
@@ -176,7 +200,7 @@ class MineSweeper extends JFrame implements ActionListener
             x2 = r.nextInt(horzsqs);
             y2 = r.nextInt(vertsqs);
 
-            if (board[x2][y2] != MINE_VAL)
+            if (board[x2][y2] != MINE_VAL && x2 != i && y2 != j)
             {
                 board[x2][y2] = MINE_VAL;
             }
@@ -273,9 +297,10 @@ class MineSweeper extends JFrame implements ActionListener
     private static void resetGame()
     {
         frame.setTitle(TitleBarDflt);
-        placeMines();
+        firstClick = true;
+        placeMines(0, 0);
         resetButtons();
-        printBoardtoConsole();
+        pop.hide();
     }
 
     private static void resetButtons()
@@ -293,6 +318,10 @@ class MineSweeper extends JFrame implements ActionListener
         String checkString = e.getActionCommand();
         switch (checkString)
         {
+            case OkStr:
+                pop.hide();
+                break;
+
             case QuitStr:
                 dispose();
                 System.exit(0);
@@ -310,10 +339,18 @@ class MineSweeper extends JFrame implements ActionListener
                 int i = (int) Math.floor(check / horzsqs);
                 int j = (int) (Math.round((q - k) * 10));
 
+                if (firstClick)
+                {
+                    firstClick = false;
+                    placeMines(i, j);
+                    actionPerformed(e);
+                }
+
                 if (board[i][j] == MINE_VAL)
                 {
-                    //losing pop up?
-                    resetGame();
+                    frame.setTitle("Loser!!!!");
+                    pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
+                    pop.show();
                 }
                 else
                 {
@@ -334,7 +371,8 @@ class MineSweeper extends JFrame implements ActionListener
 
                 if (BLOCKS_LEFT == NUM_MINES)
                 {
-                    //WINNER!
+                    pop = end_msg.getPopup(frame, WinGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (winLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (winLabel_hght / 2));
+                    pop.show();
                     frame.setTitle("Winner!!!!");
                 }
                 break;
@@ -348,9 +386,9 @@ class MineSweeper extends JFrame implements ActionListener
 //
 //      comment code better, clean up code
 //
-//      change it to an end of game pop up window. the message will change depending on win/loss
-//      not displaying correctly/at all. try to set up popframe to be similar to frame?
-//
 //      Flagging Mode?/getting rid of Mines Remaining?
 //
-//      game should generate bomb locations after first click, not before (can never click on bomb first click)
+//      game generates bomb locations after first click, But am not sure if clicking bomb first will still cause you to lose
+//      should NOT be able to click bomb on first click
+//
+//      game crashes after first click (not bomb) followed by 'new game'
