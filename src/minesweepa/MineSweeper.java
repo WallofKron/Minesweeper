@@ -160,6 +160,8 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
+
+
     private static void placeMines()
     {
         Random r = new Random();
