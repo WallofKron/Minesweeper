@@ -23,7 +23,7 @@ class MineSweeper extends JFrame implements ActionListener
     private static final int horzsqs = 10;
     private static final int NO_MINE = 0;
     private static final int MINE_VAL = 101;
-    private static final int NUM_MINES = 2;
+    private static final int NUM_MINES = 20;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
     private static final int win_x_pos = 400, win_y_pos = 120;
     private static final int win_x_size = 400, win_y_size = 400;
@@ -37,7 +37,7 @@ class MineSweeper extends JFrame implements ActionListener
 
     private static boolean firstClick = true;
 
-    private static Map<Integer, Color> color_list = new HashMap<Integer, Color>();
+    private static Map<Integer, Color> color_list = new HashMap<>();
 
     private final Font regfont = new Font("TimesRoman", Font.BOLD, 15);
 
@@ -149,9 +149,7 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].addActionListener(this);
             button[i].setActionCommand("" + i);
             button[i].setFocusPainted(false);
-            //col = (int) Math.floor(i / horzsqs);
-            //row = (int) (Math.round((((i / vertsqs)) - (Math.floor(i / vertsqs))) * 10));
-            //button[i].setForeground(buttonTextColor(col, row));
+            button[i].setForeground(Color.black);
             centerpanel.add(button[i]);
         }
 
@@ -246,7 +244,7 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
-    public static Color buttonTextColor(int col, int row)
+    private static Color buttonTextColor(int col, int row)
     {
         return color_list.get(board[col][row]);
     }
@@ -259,7 +257,7 @@ class MineSweeper extends JFrame implements ActionListener
         {
             for (int adj_x = -1; adj_x < 2; adj_x++)
             {
-                // check if the position for checking adjacency is a valid position within the board and not adjacency checking our current square
+                // check if the position is a valid position within the board and not our current square
                 if (adj_x != 0 || adj_y != 0)
                 {
                     if ((col + adj_y >= 0 && col + adj_y < horzsqs) && (row + adj_x >= 0 && row + adj_x < vertsqs))
@@ -276,6 +274,7 @@ class MineSweeper extends JFrame implements ActionListener
                                 if (board[col + adj_y][row + adj_x] != 0)
                                 {
                                     button[spot].setText(Integer.toString(board[col + adj_y][row + adj_x]));
+                                    button[spot].setForeground(buttonTextColor((col + adj_y), (row + adj_x)));
                                 }
                                 else
                                 {
@@ -300,7 +299,6 @@ class MineSweeper extends JFrame implements ActionListener
         firstClick = true;
         placeMines(0, 0);
         resetButtons();
-        pop.hide();
     }
 
     private static void resetButtons()
@@ -316,6 +314,7 @@ class MineSweeper extends JFrame implements ActionListener
     public void actionPerformed(ActionEvent e)
     {
         String checkString = e.getActionCommand();
+        outerloop:
         switch (checkString)
         {
             case OkStr:
@@ -329,21 +328,21 @@ class MineSweeper extends JFrame implements ActionListener
 
             case NewGameStr:
                 resetGame();
+                pop.hide();
                 break;
 
             default:
                 double check = Double.parseDouble(checkString);
                 int spot = Integer.parseInt(checkString);
-                double k = (Math.floor(check / vertsqs));
-                double q = (check / vertsqs);
                 int i = (int) Math.floor(check / horzsqs);
-                int j = (int) (Math.round((q - k) * 10));
+                int j = (int) (Math.round(((check / vertsqs) - (Math.floor(check / vertsqs))) * 10));
 
                 if (firstClick)
                 {
                     firstClick = false;
                     placeMines(i, j);
                     actionPerformed(e);
+                    break outerloop;                    //unnecessary? can this be done another way
                 }
 
                 if (board[i][j] == MINE_VAL)
@@ -357,13 +356,13 @@ class MineSweeper extends JFrame implements ActionListener
                     if (board[i][j] > 0)
                     {
                         button[spot].setText(Integer.toString(board[i][j]));
+                        button[spot].setForeground(buttonTextColor(i, j));
                         button[spot].setEnabled(false);
                         BLOCKS_LEFT--;
                     }
                     if (board[i][j] == 0)
                     {
                         button[spot].setEnabled(false);
-                        BLOCKS_LEFT--;
                         expandAdjacentZeros(i, j);
                     }
                 }
@@ -379,16 +378,20 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 }
-
-//      close the gap between the buttons.... make them more form fit.
+//      after expandAdjacentZeros is called, the count of Blocks_LEFT is 1 more/less than its supposed to be. Walk the code to check logic
 //
-//      fix button text color to represent the numbers.... not displaying anything but gray
+//      crash when click new game after starting new game
+//      game crashes after first click (not bomb) followed by 'new game'
+//
+//      make it so all buttons are not clickable after loss or win
+//
+//      close the gap between the buttons.... make them more form fit.
+//      fix button text color to represent the numbers.... not displaying anything but gray             BOTH? LookAndFeel?
 //
 //      comment code better, clean up code
 //
-//      Flagging Mode?/getting rid of Mines Remaining?
+//      Flagging Mode on: top left display mines remaining regardless
+//       if clicked, change button icon to flag. Flag mode has to be off to click square
 //
-//      game generates bomb locations after first click, But am not sure if clicking bomb first will still cause you to lose
-//      should NOT be able to click bomb on first click
-//
-//      game crashes after first click (not bomb) followed by 'new game'
+//      game generates bomb locations after first click(done), But am not sure if clicking bomb first will still cause you to lose
+//      should NOT be able to click bomb on first click(really test this out)
