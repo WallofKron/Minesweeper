@@ -23,7 +23,7 @@ class MineSweeper extends JFrame implements ActionListener
     private static final int horzsqs = 10;
     private static final int NO_MINE = 0;
     private static final int MINE_VAL = 101;
-    private static final int NUM_MINES = 20;
+    private static final int NUM_MINES = 5;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
     private static final int win_x_pos = 400, win_y_pos = 120;
     private static final int win_x_size = 400, win_y_size = 400;
@@ -36,6 +36,7 @@ class MineSweeper extends JFrame implements ActionListener
     private static final String OkStr = "Ok";
 
     private static boolean firstClick = true;
+    private static boolean popUpOpen = false;
 
     private static Map<Integer, Color> color_list = new HashMap<>();
 
@@ -269,7 +270,7 @@ class MineSweeper extends JFrame implements ActionListener
                             if (button[spot].isEnabled())
                             {
                                 button[spot].setEnabled(false);
-                                BLOCKS_LEFT--;
+                                --BLOCKS_LEFT;
 
                                 if (board[col + adj_y][row + adj_x] != 0)
                                 {
@@ -301,6 +302,21 @@ class MineSweeper extends JFrame implements ActionListener
         resetButtons();
     }
 
+    private static void disableAllButtons()
+    {
+        for (int col = 0; col < horzsqs; col++)
+        {
+            for (int row = 0; row < vertsqs; row++)
+            {
+                int localCheck = calcSpot(col, row);
+                if (button[localCheck].isEnabled())
+                {
+                    button[localCheck].setEnabled(false);
+                }
+            }
+        }
+    }
+
     private static void resetButtons()
     {
         for (int idx = 0; idx < NUM_BLOCKS; idx++)
@@ -314,11 +330,12 @@ class MineSweeper extends JFrame implements ActionListener
     public void actionPerformed(ActionEvent e)
     {
         String checkString = e.getActionCommand();
-        outerloop:
         switch (checkString)
         {
             case OkStr:
                 pop.hide();
+                popUpOpen = false;
+                disableAllButtons();
                 break;
 
             case QuitStr:
@@ -328,10 +345,22 @@ class MineSweeper extends JFrame implements ActionListener
 
             case NewGameStr:
                 resetGame();
-                pop.hide();
+                if (popUpOpen)
+                {
+                    pop.hide();
+                    popUpOpen = false;
+                }
                 break;
 
             default:
+                if (popUpOpen)
+                {
+                    pop.hide();
+                    popUpOpen = false;
+                    disableAllButtons();
+                    return;
+                }
+
                 double check = Double.parseDouble(checkString);
                 int spot = Integer.parseInt(checkString);
                 int i = (int) Math.floor(check / horzsqs);
@@ -341,8 +370,6 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     firstClick = false;
                     placeMines(i, j);
-                    actionPerformed(e);
-                    break outerloop;                    //unnecessary? can this be done another way
                 }
 
                 if (board[i][j] == MINE_VAL)
@@ -350,6 +377,7 @@ class MineSweeper extends JFrame implements ActionListener
                     frame.setTitle("Loser!!!!");
                     pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
                     pop.show();
+                    popUpOpen = true;
                 }
                 else
                 {
@@ -358,11 +386,12 @@ class MineSweeper extends JFrame implements ActionListener
                         button[spot].setText(Integer.toString(board[i][j]));
                         button[spot].setForeground(buttonTextColor(i, j));
                         button[spot].setEnabled(false);
-                        BLOCKS_LEFT--;
+                        --BLOCKS_LEFT;
                     }
-                    if (board[i][j] == 0)
+                    else
                     {
                         button[spot].setEnabled(false);
+                        --BLOCKS_LEFT;
                         expandAdjacentZeros(i, j);
                     }
                 }
@@ -372,19 +401,14 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     pop = end_msg.getPopup(frame, WinGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (winLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (winLabel_hght / 2));
                     pop.show();
+                    popUpOpen = true;
                     frame.setTitle("Winner!!!!");
                 }
                 break;
         }
     }
 }
-//      after expandAdjacentZeros is called, the count of Blocks_LEFT is 1 more/less than its supposed to be. Walk the code to check logic
-//
-//      crash when click new game after starting new game
-//      game crashes after first click (not bomb) followed by 'new game'
-//
-//      make it so all buttons are not clickable after loss or win
-//
+
 //      close the gap between the buttons.... make them more form fit.
 //      fix button text color to represent the numbers.... not displaying anything but gray             BOTH? LookAndFeel?
 //
@@ -392,6 +416,3 @@ class MineSweeper extends JFrame implements ActionListener
 //
 //      Flagging Mode on: top left display mines remaining regardless
 //       if clicked, change button icon to flag. Flag mode has to be off to click square
-//
-//      game generates bomb locations after first click(done), But am not sure if clicking bomb first will still cause you to lose
-//      should NOT be able to click bomb on first click(really test this out)
