@@ -416,3 +416,5 @@ class MineSweeper extends JFrame implements ActionListener
 //
 //      Flagging Mode on: top left display mines remaining regardless
 //       if clicked, change button icon to flag. Flag mode has to be off to click square
+//
+//      options menu? difficulty settings? Opening menu?
