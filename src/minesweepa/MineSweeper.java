@@ -18,25 +18,32 @@ import javax.swing.*;
 
 class MineSweeper extends JFrame implements ActionListener
 {
+    private static GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+    private static double ScrnWid = gd.getDisplayMode().getWidth();
+    private static double ScrnHght = gd.getDisplayMode().getHeight();
     private static int[][] board;
-    private static final int vertsqs = 10;
-    private static final int horzsqs = 10;
+    private static final int defButtHght = 30;
+    private static final int defButtWid = 30;
+    private static final int MenuBarHght = 15;
+    private static final int vertsqs = 20;
+    private static final int horzsqs = 20;
     private static final int NO_MINE = 0;
     private static final int MINE_VAL = 101;
-    private static final int NUM_MINES = 5;
+    private static final int NUM_MINES = 20;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
-    private static final int win_x_pos = 400, win_y_pos = 120;
-    private static final int win_x_size = 400, win_y_size = 400;
+    private static final int win_y_size = (defButtWid * horzsqs), win_x_size = ((defButtHght * vertsqs) + MenuBarHght);
+    private static final int win_x_pos = (int) ((ScrnWid / 2) - (win_x_size / 2)), win_y_pos = (int) ((ScrnHght / 2) - (win_y_size / 2));
     private static int BLOCKS_LEFT = NUM_BLOCKS;
     private static int winLabel_wid, winLabel_hght, lossLabel_wid, lossLabel_hght;
 
     private static final String NewGameStr = "New Game";
-    private static final String QuitStr = "Quit";
+    private static final String ModeStr = "Mode";
     private static final String TitleBarDflt = "MineSweeper";
     private static final String OkStr = "Ok";
 
     private static boolean firstClick = true;
     private static boolean popUpOpen = false;
+    private static boolean flagMode = false;
 
     private static Map<Integer, Color> color_list = new HashMap<>();
 
@@ -45,10 +52,10 @@ class MineSweeper extends JFrame implements ActionListener
     private static JFrame frame = new JFrame(TitleBarDflt);
 
     private static JButton[] button = new JButton[horzsqs * vertsqs];
-    private JButton newgame, Exit, WinGame, LoseGame;
+    private JButton newgame, Mode, WinGame, LoseGame;
 
-    private static JPanel northpanel, nlleft, nright, centerpanel, WinGamePanel, LoseGamePanel;
-    private static JTextArea minesleft, outputarea;
+    private static JPanel northpanel, nlleft, ncenter, nright, centerpanel, WinGamePanel, LoseGamePanel;
+    private static JTextArea minesleft, gameTimer;
     private static JLabel winLabel, lossLabel;
 
     private static PopupFactory end_msg;
@@ -72,15 +79,19 @@ class MineSweeper extends JFrame implements ActionListener
         northpanel = new JPanel();
         northpanel.setBorder(BorderFactory.createLineBorder(Color.black));
         nlleft = new JPanel();
+        ncenter = new JPanel();
         nright = new JPanel();
         northpanel.setLayout(new GridLayout());
         northpanel.add(nlleft);
+        northpanel.add(ncenter);
         northpanel.add(nright);
 
-        outputarea = new JTextArea("Mines Remaining:", 1, 10);
-        outputarea.setFont(regfont);
-        outputarea.setOpaque(false);
-        outputarea.setEditable(false);
+        Mode = new JButton(ModeStr);
+        Mode.addActionListener(this);
+
+        nlleft.setBackground(Color.red);
+        nlleft.setBorder(BorderFactory.createLineBorder(Color.white));
+        nlleft.add(Mode);
 
         minesleft = new JTextArea("" + NUM_MINES, 1, 1);
         minesleft.setFont(regfont);
@@ -88,20 +99,23 @@ class MineSweeper extends JFrame implements ActionListener
         minesleft.setEditable(false);
         minesleft.setBorder(BorderFactory.createLineBorder(Color.black));
 
-        nlleft.setBackground(Color.white);
-        nlleft.setBorder(BorderFactory.createLineBorder(Color.red));
-        nlleft.add(outputarea);
-        nlleft.add(minesleft);
+        gameTimer = new JTextArea("0:00", 1, 2);
+        gameTimer.setFont(regfont);
+        gameTimer.setOpaque(false);
+        gameTimer.setEditable(false);
+        gameTimer.setBorder(BorderFactory.createLineBorder(Color.black));
+
+        ncenter.setBackground(Color.white);
+        ncenter.setBorder(BorderFactory.createLineBorder(Color.red));
+        ncenter.add(minesleft);
+        ncenter.add(gameTimer);
 
         newgame = new JButton(NewGameStr);
-        Exit = new JButton(QuitStr);
         newgame.addActionListener(this);
-        Exit.addActionListener(this);
 
         nright.setBackground(Color.red);
         nright.setBorder(BorderFactory.createLineBorder(Color.white));
         nright.add(newgame);
-        nright.add(Exit);
 
         centerpanel = new JPanel();
         centerpanel.setLayout(new GridLayout(horzsqs, vertsqs));
@@ -338,9 +352,19 @@ class MineSweeper extends JFrame implements ActionListener
                 disableAllButtons();
                 break;
 
-            case QuitStr:
-                dispose();
-                System.exit(0);
+            case ModeStr:
+                flagMode ^= true;
+                if (flagMode)
+                {
+                    for (int q = 0; q < NUM_BLOCKS; q++)
+                    {
+                        if (button[q].isEnabled())
+                        {
+                            button[q].setIcon(new ImageIcon(MineSweeper.class.getResource("src/minesweepa/gflag.bmp")));
+                            //nullptr exception here.... not sure why its not being found.... path?... getClass/Class.class/Minesweeper.class ?
+                        }
+                    }
+                }
                 break;
 
             case NewGameStr:
@@ -408,13 +432,16 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 }
-
-//      close the gap between the buttons.... make them more form fit.
-//      fix button text color to represent the numbers.... not displaying anything but gray             BOTH? LookAndFeel?
+//      implement flagging behavior
+//
+//      weird button selection issues with bigger board? board displaying incorrect adj value. test test test
+//
+//      fix button text color to represent the numbers.... not displaying anything but gray
+//      This might be solved by Java LookAndFeel?
 //
 //      comment code better, clean up code
 //
-//      Flagging Mode on: top left display mines remaining regardless
-//       if clicked, change button icon to flag. Flag mode has to be off to click square
+//      Flagging Mode on: top left display mines remaining regardless of mode
+//       if clicked, change all enabled buttons icon's to flag. Flag mode has to be off to click square
 //
 //      options menu? difficulty settings? Opening menu?
