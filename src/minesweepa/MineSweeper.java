@@ -1,11 +1,10 @@
 package minesweepa;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridLayout;
+import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 //  @author RobertFlorence
@@ -21,37 +20,56 @@ import javax.swing.*;
 
 class MineSweeper extends JFrame implements ActionListener
 {
+    private static GraphicsDevice gd = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+    private static double ScrnWid = gd.getDisplayMode().getWidth();
+    private static double ScrnHght = gd.getDisplayMode().getHeight();
     private static int[][] board;
-    private static final int vertsqs = 10;
-    private static final int horzsqs = 10;
+    private static final int defButtHght = 30;
+    private static final int defButtWid = 30;
+    private static final int MenuBarHght = 15;
+    private static final int vertsqs = 20;
+    private static final int horzsqs = 20;
     private static final int NO_MINE = 0;
     private static final int MINE_VAL = 101;
-    private static final int NUM_MINES = 2;
+    private static final int NUM_MINES = 30;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
+    private static final int win_y_size = (defButtWid * horzsqs), win_x_size = ((defButtHght * vertsqs) + MenuBarHght);
+    private static final int win_x_pos = (int) ((ScrnWid / 2) - (win_x_size / 2)), win_y_pos = (int) ((ScrnHght / 2) - (win_y_size / 2));
     private static int BLOCKS_LEFT = NUM_BLOCKS;
-    private static final int winxpos = 400, winypos = 120;
-    private static final int win_x_size = 400, win_y_size = 400;
-    private static final int pop_wid = 100, pop_hght = 100;
+    private static int winLabel_wid, winLabel_hght, lossLabel_wid, lossLabel_hght;
 
     private static final String NewGameStr = "New Game";
-    private static final String QuitStr = "Quit";
+    private static final String ModeStr = "Mode";
     private static final String TitleBarDflt = "MineSweeper";
+    private static final String OkStr = "Ok";
 
-    private static Map<Integer, Color> color_list = new HashMap<Integer, Color>();
+    private static boolean firstClick = true;
+    private static boolean popUpOpen = false;
+    private static boolean flagMode = false;
+
+    private static Map<Integer, Color> color_list = new HashMap<>();
 
     private final Font regfont = new Font("TimesRoman", Font.BOLD, 15);
 
     private static JFrame frame = new JFrame(TitleBarDflt);
-    private static JFrame popframe = new JFrame(TitleBarDflt);
 
     private static JButton[] button = new JButton[horzsqs * vertsqs];
-    private JButton newgame, Exit, engGame;
+    private JButton newgame, Mode, WinGame, LoseGame;
 
-    private JPanel northpanel, nlleft, nright, centerpanel, poppanel;
-    private JTextArea minesleft, outputarea, EndgameMsg;
+    private static JPanel northpanel, nlleft, ncenter, nright, centerpanel, WinGamePanel, LoseGamePanel;
+    private static JTextArea minesleft, gameTimer;
+    private static JLabel winLabel, lossLabel;
 
-    PopupFactory win_msg;
-    Popup pop;
+    private static PopupFactory end_msg;
+    private static Popup pop;
+    private static Dimension Win_dimension, loss_dimension;
+
+    private String gflagpath = "gflag.bmp";
+    private String rflagpath = "flag.bmp";
+    private Image rflagimg;
+    private Image gflagimg;
+    private ImageIcon redflagicon;
+    private ImageIcon greyflagicon;
 
     public static void main(String[] args)
     {
@@ -63,22 +81,26 @@ class MineSweeper extends JFrame implements ActionListener
         frame = this;
         frame.setLayout(new BorderLayout());
         frame.setSize(win_x_size, win_y_size);
-        frame.setLocation(winxpos, winypos);
+        frame.setLocation(win_x_pos, win_y_pos);
         frame.setResizable(false);
         frame.setTitle(TitleBarDflt);
 
         northpanel = new JPanel();
         northpanel.setBorder(BorderFactory.createLineBorder(Color.black));
         nlleft = new JPanel();
+        ncenter = new JPanel();
         nright = new JPanel();
         northpanel.setLayout(new GridLayout());
         northpanel.add(nlleft);
+        northpanel.add(ncenter);
         northpanel.add(nright);
 
-        outputarea = new JTextArea("Mines Remaining:", 1, 10);
-        outputarea.setFont(regfont);
-        outputarea.setOpaque(false);
-        outputarea.setEditable(false);
+        Mode = new JButton(ModeStr);
+        Mode.addActionListener(this);
+
+        nlleft.setBackground(Color.red);
+        nlleft.setBorder(BorderFactory.createLineBorder(Color.white));
+        nlleft.add(Mode);
 
         minesleft = new JTextArea("" + NUM_MINES, 1, 1);
         minesleft.setFont(regfont);
@@ -86,20 +108,23 @@ class MineSweeper extends JFrame implements ActionListener
         minesleft.setEditable(false);
         minesleft.setBorder(BorderFactory.createLineBorder(Color.black));
 
-        nlleft.setBackground(Color.white);
-        nlleft.setBorder(BorderFactory.createLineBorder(Color.red));
-        nlleft.add(outputarea);
-        nlleft.add(minesleft);
+        gameTimer = new JTextArea("0:00", 1, 2);
+        gameTimer.setFont(regfont);
+        gameTimer.setOpaque(false);
+        gameTimer.setEditable(false);
+        gameTimer.setBorder(BorderFactory.createLineBorder(Color.black));
+
+        ncenter.setBackground(Color.white);
+        ncenter.setBorder(BorderFactory.createLineBorder(Color.red));
+        ncenter.add(minesleft);
+        ncenter.add(gameTimer);
 
         newgame = new JButton(NewGameStr);
-        Exit = new JButton(QuitStr);
         newgame.addActionListener(this);
-        Exit.addActionListener(this);
 
         nright.setBackground(Color.red);
         nright.setBorder(BorderFactory.createLineBorder(Color.white));
         nright.add(newgame);
-        nright.add(Exit);
 
         centerpanel = new JPanel();
         centerpanel.setLayout(new GridLayout(horzsqs, vertsqs));
@@ -115,8 +140,32 @@ class MineSweeper extends JFrame implements ActionListener
         color_list.put(7, Color.orange);
         color_list.put(8, Color.red);
 
-        placeMines();
-        //int col = 0, row = 0;
+        end_msg = new PopupFactory();
+        winLabel = new JLabel("YOU WIN!");
+        winLabel.setFont(new Font("BOLD", Font.BOLD, 24));
+        Win_dimension = winLabel.getPreferredSize();
+        winLabel_hght = Win_dimension.height;
+        winLabel_wid = Win_dimension.width;
+        WinGame = new JButton(OkStr);
+        WinGame.addActionListener(this);
+        WinGamePanel = new JPanel();
+        WinGamePanel.setBackground(Color.red);
+        WinGamePanel.add(winLabel);
+        WinGamePanel.add(WinGame);
+        WinGamePanel.setLayout(new GridLayout(2, 1));
+
+        lossLabel = new JLabel("YOU LOSE!");
+        lossLabel.setFont(new Font("BOLD", Font.BOLD, 24));
+        loss_dimension = lossLabel.getPreferredSize();
+        lossLabel_hght = loss_dimension.height;
+        lossLabel_wid = loss_dimension.width;
+        LoseGame = new JButton(OkStr);
+        LoseGame.addActionListener(this);
+        LoseGamePanel = new JPanel();
+        LoseGamePanel.setBackground(Color.white);
+        LoseGamePanel.add(lossLabel);
+        LoseGamePanel.add(LoseGame);
+        LoseGamePanel.setLayout(new GridLayout(2, 1));
 
         for (int i = 0; i < NUM_BLOCKS; i++)
         {
@@ -124,14 +173,23 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].addActionListener(this);
             button[i].setActionCommand("" + i);
             button[i].setFocusPainted(false);
-            //col = (int) Math.floor(i / horzsqs);
-            //row = (int) (Math.round((((i / vertsqs)) - (Math.floor(i / vertsqs))) * 10));
-            //button[i].setForeground(buttonTextColor(col, row));
+            button[i].setForeground(Color.black);
             centerpanel.add(button[i]);
         }
-
         getContentPane().add("North", northpanel);
         getContentPane().add("Center", centerpanel);
+
+        try
+        {
+            rflagimg = ImageIO.read(getClass().getResource(rflagpath));
+            gflagimg = ImageIO.read(getClass().getResource(gflagpath));
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        redflagicon = new ImageIcon(rflagimg);
+        greyflagicon = new ImageIcon(gflagimg);
 
         frame.setVisible(true);
 
@@ -143,7 +201,6 @@ class MineSweeper extends JFrame implements ActionListener
                 System.exit(0);
             }
         });
-        printBoardtoConsole();
     }
 
     private static void printBoardtoConsole()
@@ -160,9 +217,7 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
-
-
-    private static void placeMines()
+    private static void placeMines(int i, int j)
     {
         Random r = new Random();
         int x2, y2;
@@ -178,7 +233,7 @@ class MineSweeper extends JFrame implements ActionListener
             x2 = r.nextInt(horzsqs);
             y2 = r.nextInt(vertsqs);
 
-            if (board[x2][y2] != MINE_VAL)
+            if (board[x2][y2] != MINE_VAL && x2 != i && y2 != j)
             {
                 board[x2][y2] = MINE_VAL;
             }
@@ -224,10 +279,9 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
-    public static Color buttonTextColor(int col, int row)
+    private static Color buttonTextColor(int col, int row)
     {
-        Color color = color_list.get(board[col][row]);
-        return color;
+        return color_list.get(board[col][row]);
     }
 
     //check and 'press' every button around the 0 if its not a bomb.
@@ -238,7 +292,7 @@ class MineSweeper extends JFrame implements ActionListener
         {
             for (int adj_x = -1; adj_x < 2; adj_x++)
             {
-                // check if the position for checking adjacency is a valid position within the board and not adjacency checking our current square
+                // check if the position is a valid position within the board and not our current square
                 if (adj_x != 0 || adj_y != 0)
                 {
                     if ((col + adj_y >= 0 && col + adj_y < horzsqs) && (row + adj_x >= 0 && row + adj_x < vertsqs))
@@ -250,11 +304,12 @@ class MineSweeper extends JFrame implements ActionListener
                             if (button[spot].isEnabled())
                             {
                                 button[spot].setEnabled(false);
-                                BLOCKS_LEFT--;
+                                --BLOCKS_LEFT;
 
                                 if (board[col + adj_y][row + adj_x] != 0)
                                 {
                                     button[spot].setText(Integer.toString(board[col + adj_y][row + adj_x]));
+                                    button[spot].setForeground(buttonTextColor((col + adj_y), (row + adj_x)));
                                 }
                                 else
                                 {
@@ -276,9 +331,24 @@ class MineSweeper extends JFrame implements ActionListener
     private static void resetGame()
     {
         frame.setTitle(TitleBarDflt);
-        placeMines();
+        firstClick = true;
+        placeMines(0, 0);
         resetButtons();
-        printBoardtoConsole();
+    }
+
+    private static void disableAllButtons()
+    {
+        for (int col = 0; col < horzsqs; col++)
+        {
+            for (int row = 0; row < vertsqs; row++)
+            {
+                int localCheck = calcSpot(col, row);
+                if (button[localCheck].isEnabled())
+                {
+                    button[localCheck].setEnabled(false);
+                }
+            }
+        }
     }
 
     private static void resetButtons()
@@ -296,40 +366,75 @@ class MineSweeper extends JFrame implements ActionListener
         String checkString = e.getActionCommand();
         switch (checkString)
         {
-            case QuitStr:
-                dispose();
-                System.exit(0);
+            case OkStr:
+                pop.hide();
+                popUpOpen = false;
+                disableAllButtons();
+                break;
+
+            case ModeStr:
+                flagMode ^= true;
+                if (flagMode)
+                {
+                    for (int q = 0; q < NUM_BLOCKS; q++)
+                    {
+                        if (button[q].isEnabled())
+                        {
+                            button[q].setIcon(greyflagicon);
+                        }
+                    }
+                }
                 break;
 
             case NewGameStr:
                 resetGame();
+                if (popUpOpen)
+                {
+                    pop.hide();
+                    popUpOpen = false;
+                }
                 break;
 
             default:
+                if (popUpOpen)
+                {
+                    pop.hide();
+                    popUpOpen = false;
+                    disableAllButtons();
+                    return;
+                }
+
                 double check = Double.parseDouble(checkString);
                 int spot = Integer.parseInt(checkString);
-                double k = (Math.floor(check / vertsqs));
-                double q = (check / vertsqs);
                 int i = (int) Math.floor(check / horzsqs);
-                int j = (int) (Math.round((q - k) * 10));
+                int j = (int) (Math.round(((check / vertsqs) - (Math.floor(check / vertsqs))) * vertsqs));
+
+                if (firstClick)
+                {
+                    firstClick = false;
+                    placeMines(i, j);
+                }
 
                 if (board[i][j] == MINE_VAL)
                 {
-                    //losing pop up?
-                    resetGame();
+                    frame.setTitle("Loser!!!!");
+                    pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
+                    pop.show();
+                    popUpOpen = true;
                 }
                 else
                 {
                     if (board[i][j] > 0)
                     {
                         button[spot].setText(Integer.toString(board[i][j]));
+                        button[spot].setForeground(buttonTextColor(i, j));
                         button[spot].setEnabled(false);
-                        BLOCKS_LEFT--;
+                        --BLOCKS_LEFT;
                     }
-                    if (board[i][j] == 0)
+                    else
                     {
                         button[spot].setEnabled(false);
-                        BLOCKS_LEFT--;
+                        --BLOCKS_LEFT;
                         expandAdjacentZeros(i, j);
                     }
                 }
@@ -337,7 +442,9 @@ class MineSweeper extends JFrame implements ActionListener
 
                 if (BLOCKS_LEFT == NUM_MINES)
                 {
-                    //WINNER!
+                    pop = end_msg.getPopup(frame, WinGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (winLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (winLabel_hght / 2));
+                    pop.show();
+                    popUpOpen = true;
                     frame.setTitle("Winner!!!!");
                 }
                 break;
@@ -345,15 +452,13 @@ class MineSweeper extends JFrame implements ActionListener
     }
 }
 
-//      close the gap between the buttons.... make them more form fit.
-//
-//      fix button text color to represent the numbers.... not displaying anything but gray
-//
-//      comment code better, clean up code
-//
-//      change it to an end of game pop up window. the message will change depending on win/loss
-//      not displaying correctly/at all. try to set up popframe to be similar to frame?
-//
-//      Flagging Mode?/getting rid of Mines Remaining?
-//
-//      game should generate bomb locations after first click, not before (can never click on bomb first click)
+// TODO:
+//      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
+//      - Make sure when Flagging Mode is on top left display mines remaining (when flagged it subtracts)
+//      - Ensure Flag mode is off to press square. Flag mode on means it marks square as red flag(saying its a mine)
+//      - Button flags (in flag mode) are sized a little too large but displaying none the less.
+//      - Implement flag mode functionality
+//      - When Game over(win/loss) and pressing the rest of the buttons, change bomb locations buttons to bomb icon
+//      - TEST TEST TEST all the new functionality
+//      - comment code better, clean up code
+//      - options menu? difficulty settings? Opening menu?
