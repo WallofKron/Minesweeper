@@ -2,7 +2,9 @@ package minesweepa;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 //  @author RobertFlorence
@@ -29,7 +31,7 @@ class MineSweeper extends JFrame implements ActionListener
     private static final int horzsqs = 20;
     private static final int NO_MINE = 0;
     private static final int MINE_VAL = 101;
-    private static final int NUM_MINES = 20;
+    private static final int NUM_MINES = 30;
     private static final int NUM_BLOCKS = vertsqs * horzsqs;
     private static final int win_y_size = (defButtWid * horzsqs), win_x_size = ((defButtHght * vertsqs) + MenuBarHght);
     private static final int win_x_pos = (int) ((ScrnWid / 2) - (win_x_size / 2)), win_y_pos = (int) ((ScrnHght / 2) - (win_y_size / 2));
@@ -61,6 +63,13 @@ class MineSweeper extends JFrame implements ActionListener
     private static PopupFactory end_msg;
     private static Popup pop;
     private static Dimension Win_dimension, loss_dimension;
+
+    private String gflagpath = "gflag.bmp";
+    private String rflagpath = "flag.bmp";
+    private Image rflagimg;
+    private Image gflagimg;
+    private ImageIcon redflagicon;
+    private ImageIcon greyflagicon;
 
     public static void main(String[] args)
     {
@@ -167,9 +176,20 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].setForeground(Color.black);
             centerpanel.add(button[i]);
         }
-
         getContentPane().add("North", northpanel);
         getContentPane().add("Center", centerpanel);
+
+        try
+        {
+            rflagimg = ImageIO.read(getClass().getResource(rflagpath));
+            gflagimg = ImageIO.read(getClass().getResource(gflagpath));
+        } catch (IOException ex)
+        {
+            ex.printStackTrace();
+        }
+
+        redflagicon = new ImageIcon(rflagimg);
+        greyflagicon = new ImageIcon(gflagimg);
 
         frame.setVisible(true);
 
@@ -360,8 +380,7 @@ class MineSweeper extends JFrame implements ActionListener
                     {
                         if (button[q].isEnabled())
                         {
-                            button[q].setIcon(new ImageIcon(MineSweeper.class.getResource("src/minesweepa/gflag.bmp")));
-                            //nullptr exception here.... not sure why its not being found.... path?... getClass/Class.class/Minesweeper.class ?
+                            button[q].setIcon(greyflagicon);
                         }
                     }
                 }
@@ -388,7 +407,7 @@ class MineSweeper extends JFrame implements ActionListener
                 double check = Double.parseDouble(checkString);
                 int spot = Integer.parseInt(checkString);
                 int i = (int) Math.floor(check / horzsqs);
-                int j = (int) (Math.round(((check / vertsqs) - (Math.floor(check / vertsqs))) * 10));
+                int j = (int) (Math.round(((check / vertsqs) - (Math.floor(check / vertsqs))) * vertsqs));
 
                 if (firstClick)
                 {
@@ -432,16 +451,14 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 }
-//      implement flagging behavior
-//
-//      weird button selection issues with bigger board? board displaying incorrect adj value. test test test
-//
-//      fix button text color to represent the numbers.... not displaying anything but gray
-//      This might be solved by Java LookAndFeel?
-//
-//      comment code better, clean up code
-//
-//      Flagging Mode on: top left display mines remaining regardless of mode
-//       if clicked, change all enabled buttons icon's to flag. Flag mode has to be off to click square
-//
-//      options menu? difficulty settings? Opening menu?
+
+// TODO:
+//      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
+//      - Make sure when Flagging Mode is on top left display mines remaining (when flagged it subtracts)
+//      - Ensure Flag mode is off to press square. Flag mode on means it marks square as red flag(saying its a mine)
+//      - Button flags (in flag mode) are sized a little too large but displaying none the less.
+//      - Implement flag mode functionality
+//      - When Game over(win/loss) and pressing the rest of the buttons, change bomb locations buttons to bomb icon
+//      - TEST TEST TEST all the new functionality
+//      - comment code better, clean up code
+//      - options menu? difficulty settings? Opening menu?
