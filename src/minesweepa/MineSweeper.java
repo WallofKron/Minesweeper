@@ -384,10 +384,14 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     for (int q = 0; q < NUM_BLOCKS; q++)
                     {
-                        if (button[q].isEnabled())
+                        if (button[q].getName().length() > 0)            //crash here because getName returns null.... at this point names haven't been set
+                        // so it doesnt have a name to return. This was done to check if red flag was set
                         {
-                            button[q].setIcon(greyflagicon);
-                            button[q].setName("greyFlag");
+                            if (button[q].isEnabled() && !(button[q].getName().equals("redFlag")))
+                            {
+                                button[q].setIcon(greyflagicon);
+                                button[q].setName("greyFlag");
+                            }
                         }
                     }
                 }
@@ -395,9 +399,13 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     for (int z = 0; z < NUM_BLOCKS; z++)
                     {
-                        if (button[z].isEnabled())
+                        if (button[z].getName().length() > 0)            //crash here because getName returns null.... at this point names haven't been set
+                        // so it doesnt have a name to return. This was done to check if red flag was set
                         {
-                            button[z].setIcon(null);
+                            if (button[z].isEnabled() && button[z].getName().equals("greyFlag"))
+                            {
+                                button[z].setIcon(null);
+                            }
                         }
                     }
                 }
@@ -494,7 +502,7 @@ class MineSweeper extends JFrame implements ActionListener
 //          - clicking non-enabled numbered blocks in flag mode presses all adjacent enabled squares
 //          - Size icon larger?  also change/get rid of background behind image icon? currently is white. Makes icon look bad
 //          - flag mode win condition? when the only blocks remaining are flagged, and are not bombs
-//          - dont get rid of red flag when turning off flag mode
+//          - dont get rid of red flag when turning off flag mode       (in progress......)
 //      - Get game clock working. Currently just blank slate.
 //      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
 //      - When Game over(win/loss) display bomb locations buttons with bomb icon. Leave all other squares as is
