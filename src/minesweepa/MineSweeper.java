@@ -179,6 +179,7 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].setActionCommand("" + i);
             button[i].setFocusPainted(false);
             button[i].setForeground(Color.black);
+            button[i].setName("noFlag");
             centerpanel.add(button[i]);
         }
         getContentPane().add("North", northpanel);
@@ -340,6 +341,10 @@ class MineSweeper extends JFrame implements ActionListener
         firstClick = true;
         placeMines(0, 0);
         resetButtons();
+        BLOCKS_LEFT = NUM_BLOCKS;
+        BLOCKS_FLAGGED = 0;
+        minesleft.setText("" + (NUM_MINES - BLOCKS_FLAGGED));
+        flagMode = false;
     }
 
     private static void disableAllButtons()
@@ -363,8 +368,9 @@ class MineSweeper extends JFrame implements ActionListener
         {
             button[idx].setEnabled(true);
             button[idx].setText("");
+            button[idx].setName("noFlag");
+            button[idx].setIcon(null);
         }
-        BLOCKS_LEFT = NUM_BLOCKS;
     }
 
     public void actionPerformed(ActionEvent e)
@@ -384,8 +390,7 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     for (int q = 0; q < NUM_BLOCKS; q++)
                     {
-                        if (button[q].getName().length() > 0)            //crash here because getName returns null.... at this point names haven't been set
-                        // so it doesnt have a name to return. This was done to check if red flag was set
+                        if (button[q].getName().length() > 0)
                         {
                             if (button[q].isEnabled() && !(button[q].getName().equals("redFlag")))
                             {
@@ -399,8 +404,7 @@ class MineSweeper extends JFrame implements ActionListener
                 {
                     for (int z = 0; z < NUM_BLOCKS; z++)
                     {
-                        if (button[z].getName().length() > 0)            //crash here because getName returns null.... at this point names haven't been set
-                        // so it doesnt have a name to return. This was done to check if red flag was set
+                        if (button[z].getName().length() > 0)
                         {
                             if (button[z].isEnabled() && button[z].getName().equals("greyFlag"))
                             {
@@ -441,27 +445,30 @@ class MineSweeper extends JFrame implements ActionListener
                 }
                 if (!flagMode)
                 {
-                    if (board[i][j] == MINE_VAL)
+                    if (!(button[spot].getName().equals("redFlag")))
                     {
-                        frame.setTitle("Loser!!!!");
-                        pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
-                        pop.show();
-                        popUpOpen = true;
-                    }
-                    else
-                    {
-                        if (board[i][j] > 0)
+                        if (board[i][j] == MINE_VAL)
                         {
-                            button[spot].setText(Integer.toString(board[i][j]));
-                            button[spot].setForeground(buttonTextColor(i, j));
-                            button[spot].setEnabled(false);
-                            --BLOCKS_LEFT;
+                            frame.setTitle("Loser!!!!");
+                            pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
+                            pop.show();
+                            popUpOpen = true;
                         }
                         else
                         {
-                            button[spot].setEnabled(false);
-                            --BLOCKS_LEFT;
-                            expandAdjacentZeros(i, j);
+                            if (board[i][j] > 0)
+                            {
+                                button[spot].setText(Integer.toString(board[i][j]));
+                                button[spot].setForeground(buttonTextColor(i, j));
+                                button[spot].setEnabled(false);
+                                --BLOCKS_LEFT;
+                            }
+                            else
+                            {
+                                button[spot].setEnabled(false);
+                                --BLOCKS_LEFT;
+                                expandAdjacentZeros(i, j);
+                            }
                         }
                     }
                 }
@@ -497,15 +504,12 @@ class MineSweeper extends JFrame implements ActionListener
 
 // TODO:
 //      - Implement flag mode functionality
-//          - Ensure Flag mode is off to press square
 //          - Button flags (in flag mode) are sized a little too large but displaying none the less.
-//          - clicking non-enabled numbered blocks in flag mode presses all adjacent enabled squares
 //          - Size icon larger?  also change/get rid of background behind image icon? currently is white. Makes icon look bad
-//          - flag mode win condition? when the only blocks remaining are flagged, and are not bombs
-//          - dont get rid of red flag when turning off flag mode       (in progress......)
 //      - Get game clock working. Currently just blank slate.
 //      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
-//      - When Game over(win/loss) display bomb locations buttons with bomb icon. Leave all other squares as is
+//      - When Game over(win/loss) display bomb locations buttons with bomb icon. Leave all other squares as is, change icons of incorrectly flagged bombs to X's(?)
+//      - clicking non-enabled numbered blocks in flag mode presses all adjacent enabled squares
 //      - options menu? difficulty settings? Opening menu?
 //          - handled as a popmenu???? breaking everything else?
 //      - TEST TEST TEST all the new functionality
