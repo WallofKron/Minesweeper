@@ -3,6 +3,7 @@ package minesweepa;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
 import java.util.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -38,8 +39,8 @@ class MineSweeper extends JFrame implements ActionListener
     private static int BLOCKS_LEFT = NUM_BLOCKS;
     private static int BLOCKS_FLAGGED = 0;
     private static int winLabel_wid, winLabel_hght, lossLabel_wid, lossLabel_hght;
-    private static int SCLD_ICON_HGHT = 25;
-    private static int SCLD_ICON_WID = 25;
+    private static int SCLD_ICON_HGHT = 24;
+    private static int SCLD_ICON_WID = 24;
 
     private static final String NewGameStr = "New Game";
     private static final String ModeStr = "Mode";
@@ -69,10 +70,12 @@ class MineSweeper extends JFrame implements ActionListener
 
     private String gflagpath = "gflag.bmp";
     private String rflagpath = "flag.bmp";
-    private Image rflagimg;
-    private Image gflagimg;
+    private BufferedImage rflagimg;
+    private BufferedImage gflagimg;
     private Image rflagscaledimg;
     private Image gflagscaledimg;
+    private BufferedImage rflagbuff;
+    private BufferedImage gflagbuff;
     private ImageIcon redflagicon;
     private ImageIcon greyflagicon;
 
@@ -178,7 +181,7 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].addActionListener(this);
             button[i].setActionCommand("" + i);
             button[i].setFocusPainted(false);
-            button[i].setForeground(Color.black);
+            button[i].setOpaque(false);
             button[i].setName("noFlag");
             centerpanel.add(button[i]);
         }
@@ -193,10 +196,40 @@ class MineSweeper extends JFrame implements ActionListener
         {
             ex.printStackTrace();
         }
+
         rflagscaledimg = rflagimg.getScaledInstance(SCLD_ICON_WID, SCLD_ICON_HGHT, java.awt.Image.SCALE_SMOOTH);
         gflagscaledimg = gflagimg.getScaledInstance(SCLD_ICON_WID, SCLD_ICON_HGHT, java.awt.Image.SCALE_SMOOTH);
-        redflagicon = new ImageIcon(rflagscaledimg);
-        greyflagicon = new ImageIcon(gflagscaledimg);
+        rflagbuff = new BufferedImage(SCLD_ICON_WID, SCLD_ICON_HGHT, BufferedImage.TYPE_INT_ARGB);
+        gflagbuff = new BufferedImage(SCLD_ICON_WID, SCLD_ICON_HGHT, BufferedImage.TYPE_INT_ARGB);
+        rflagbuff.getGraphics().drawImage(rflagscaledimg, 0, 0, null);
+        gflagbuff.getGraphics().drawImage(gflagscaledimg, 0, 0, null);
+        final BufferedImage gflag_trans = new BufferedImage(rflagbuff.getWidth(), rflagbuff.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        final BufferedImage rflag_trans = new BufferedImage(gflagbuff.getWidth(), gflagbuff.getHeight(), BufferedImage.TYPE_INT_ARGB);
+
+        Color cTrans = new Color(255, 0, 0, 0);
+
+        for (int x = 0; x < rflagbuff.getWidth(); x++)
+        {
+            for (int y = 0; y < rflagbuff.getHeight(); y++)
+            {
+                Color c = new Color(rflagbuff.getRGB(x, y), true);
+                Color cNew = (c.equals(Color.WHITE) ? cTrans : c);
+                gflag_trans.setRGB(x, y, cNew.getRGB());
+            }
+        }
+
+        for (int x = 0; x < gflagbuff.getWidth(); x++)
+        {
+            for (int y = 0; y < gflagbuff.getHeight(); y++)
+            {
+                Color c = new Color(gflagbuff.getRGB(x, y), true);
+                Color cNew = (c.equals(Color.WHITE) ? cTrans : c);
+                gflag_trans.setRGB(x, y, cNew.getRGB());
+            }
+        }
+
+        redflagicon = new ImageIcon(rflag_trans);
+        greyflagicon = new ImageIcon(gflag_trans);
 
         frame.setVisible(true);
 
@@ -504,7 +537,6 @@ class MineSweeper extends JFrame implements ActionListener
 
 // TODO:
 //      - Implement flag mode functionality
-//          - Button flags (in flag mode) are sized a little too large but displaying none the less.
 //          - Size icon larger?  also change/get rid of background behind image icon? currently is white. Makes icon look bad
 //      - Get game clock working. Currently just blank slate.
 //      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
