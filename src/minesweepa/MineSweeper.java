@@ -228,6 +228,9 @@ class MineSweeper extends JFrame implements ActionListener
             }
         }
 
+
+        //WHY DOES IMAGEICON use white when the values are transparent/nonexistant.
+        //rflag_trans and gflag_trans images dont have white background. Why does imageicon
         redflagicon = new ImageIcon(rflag_trans);
         greyflagicon = new ImageIcon(gflag_trans);
 
@@ -538,6 +541,8 @@ class MineSweeper extends JFrame implements ActionListener
 // TODO:
 //      - Implement flag mode functionality
 //          - Size icon larger?  also change/get rid of background behind image icon? currently is white. Makes icon look bad
+//              - WHY DOES IMAGEICON use white when the values are transparent/nonexistant.
+//              - rflag_trans and gflag_trans images dont have white background. Why does imageicon
 //      - Get game clock working. Currently just blank slate.
 //      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
 //      - When Game over(win/loss) display bomb locations buttons with bomb icon. Leave all other squares as is, change icons of incorrectly flagged bombs to X's(?)
