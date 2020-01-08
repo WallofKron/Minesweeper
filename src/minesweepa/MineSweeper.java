@@ -3,9 +3,11 @@ package minesweepa;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.IOException;
+import java.awt.image.BufferedImage;
 import java.util.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.Timer;
 
 //  @author RobertFlorence
 //  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -38,8 +40,9 @@ class MineSweeper extends JFrame implements ActionListener
     private static int BLOCKS_LEFT = NUM_BLOCKS;
     private static int BLOCKS_FLAGGED = 0;
     private static int winLabel_wid, winLabel_hght, lossLabel_wid, lossLabel_hght;
-    private static int SCLD_ICON_HGHT = 25;
-    private static int SCLD_ICON_WID = 25;
+    private static int SCLD_ICON_HGHT = 24;
+    private static int SCLD_ICON_WID = 24;
+    private static int mins = 0, seconds = 0;
 
     private static final String NewGameStr = "New Game";
     private static final String ModeStr = "Mode";
@@ -67,14 +70,23 @@ class MineSweeper extends JFrame implements ActionListener
     private static Popup pop;
     private static Dimension Win_dimension, loss_dimension;
 
-    private String gflagpath = "gflag.bmp";
-    private String rflagpath = "flag.bmp";
-    private Image rflagimg;
-    private Image gflagimg;
+    private String gflagpath = "gflag.png";
+    private String rflagpath = "flag.png";
+    private String bombpath = "bomb.png";
+    private BufferedImage rflagimg;
+    private BufferedImage gflagimg;
+    private BufferedImage bombimg;
     private Image rflagscaledimg;
     private Image gflagscaledimg;
+    private Image bombscaledimg;
+    private BufferedImage rflagbuff;
+    private BufferedImage gflagbuff;
+    private BufferedImage bombbuff;
     private ImageIcon redflagicon;
     private ImageIcon greyflagicon;
+    private ImageIcon bombicon;
+
+    private static Timer game_timer;
 
     public static void main(String[] args)
     {
@@ -178,7 +190,6 @@ class MineSweeper extends JFrame implements ActionListener
             button[i].addActionListener(this);
             button[i].setActionCommand("" + i);
             button[i].setFocusPainted(false);
-            button[i].setForeground(Color.black);
             button[i].setName("noFlag");
             centerpanel.add(button[i]);
         }
@@ -189,14 +200,69 @@ class MineSweeper extends JFrame implements ActionListener
         {
             rflagimg = ImageIO.read(getClass().getResource(rflagpath));
             gflagimg = ImageIO.read(getClass().getResource(gflagpath));
+            bombimg = ImageIO.read(getClass().getResource(bombpath));
         } catch (IOException ex)
         {
             ex.printStackTrace();
         }
+
         rflagscaledimg = rflagimg.getScaledInstance(SCLD_ICON_WID, SCLD_ICON_HGHT, java.awt.Image.SCALE_SMOOTH);
         gflagscaledimg = gflagimg.getScaledInstance(SCLD_ICON_WID, SCLD_ICON_HGHT, java.awt.Image.SCALE_SMOOTH);
-        redflagicon = new ImageIcon(rflagscaledimg);
-        greyflagicon = new ImageIcon(gflagscaledimg);
+        bombscaledimg = bombimg.getScaledInstance(SCLD_ICON_WID, SCLD_ICON_HGHT, java.awt.Image.SCALE_SMOOTH);
+        rflagbuff = new BufferedImage(SCLD_ICON_WID, SCLD_ICON_HGHT, BufferedImage.TYPE_INT_ARGB);
+        gflagbuff = new BufferedImage(SCLD_ICON_WID, SCLD_ICON_HGHT, BufferedImage.TYPE_INT_ARGB);
+        bombbuff = new BufferedImage(SCLD_ICON_WID, SCLD_ICON_HGHT, BufferedImage.TYPE_INT_ARGB);
+        rflagbuff.getGraphics().drawImage(rflagscaledimg, 0, 0, null);
+        gflagbuff.getGraphics().drawImage(gflagscaledimg, 0, 0, null);
+        bombbuff.getGraphics().drawImage(bombscaledimg, 0, 0, null);
+        final BufferedImage rflag_trans = new BufferedImage(rflagbuff.getWidth(), rflagbuff.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        final BufferedImage gflag_trans = new BufferedImage(gflagbuff.getWidth(), gflagbuff.getHeight(), BufferedImage.TYPE_INT_ARGB);
+        final BufferedImage bomb_trans = new BufferedImage(bombbuff.getWidth(), bombbuff.getHeight(), BufferedImage.TYPE_INT_ARGB);
+
+        Color cTrans = new Color(255, 0, 0, 0);
+
+        for (int x = 0; x < rflagbuff.getWidth(); x++)
+        {
+            for (int y = 0; y < rflagbuff.getHeight(); y++)
+            {
+                Color c = new Color(rflagbuff.getRGB(x, y), true);
+                Color cNew = (c.equals(Color.WHITE) ? cTrans : c);
+                rflag_trans.setRGB(x, y, cNew.getRGB());
+            }
+        }
+
+        for (int x = 0; x < gflagbuff.getWidth(); x++)
+        {
+            for (int y = 0; y < gflagbuff.getHeight(); y++)
+            {
+                Color c = new Color(gflagbuff.getRGB(x, y), true);
+                Color cNew = (c.equals(Color.WHITE) ? cTrans : c);
+                gflag_trans.setRGB(x, y, cNew.getRGB());
+            }
+        }
+
+        for (int x = 0; x < bombbuff.getWidth(); x++)
+        {
+            for (int y = 0; y < bombbuff.getHeight(); y++)
+            {
+                Color c = new Color(bombbuff.getRGB(x, y), true);
+                Color cNew = (c.equals(Color.WHITE) ? cTrans : c);
+                bomb_trans.setRGB(x, y, cNew.getRGB());
+            }
+        }
+
+
+        //WHY DOES IMAGEICON use white when the values are transparent/nonexistant.
+        //rflag_trans and gflag_trans images dont have white background. Why does imageicon
+        redflagicon = new ImageIcon(rflag_trans);
+        greyflagicon = new ImageIcon(gflag_trans);
+        bombicon = new ImageIcon(bomb_trans);
+
+        game_timer = new Timer(1000, evt ->
+        {
+            String clock_val = getClockVal();
+            gameTimer.setText(clock_val);
+        });
 
         frame.setVisible(true);
 
@@ -243,47 +309,40 @@ class MineSweeper extends JFrame implements ActionListener
             if (board[x2][y2] != MINE_VAL && x2 != i && y2 != j)
             {
                 board[x2][y2] = MINE_VAL;
-            }
-            else
-            {
-                idx--;
-            }
-        }
-        fillAdjacencyValuesOnBoard();
-        printBoardtoConsole();
-    }
 
-    private static void fillAdjacencyValuesOnBoard()
-    {
-        //go through every square of the board
-        for (int col = 0; col < horzsqs; col++)
-        {
-            for (int row = 0; row < vertsqs; row++)
-            {
-                if (board[col][row] != MINE_VAL)
+                for (int adj_y = -1; adj_y < 2; adj_y++)
                 {
-                    //adjacency value check for the 8 adjacent squares around the current square its on
-                    for (int adj_y = -1; adj_y < 2; adj_y++)
+                    for (int adj_x = -1; adj_x < 2; adj_x++)
                     {
-                        for (int adj_x = -1; adj_x < 2; adj_x++)
+                        if (adj_x != 0 || adj_y != 0)
                         {
-                            //check if the position for checking adjacency is a valid position(within the board)
-                            if (adj_x != 0 || adj_y != 0)
+                            if ((x2 + adj_y >= 0 && x2 + adj_y < horzsqs) && (y2 + adj_x >= 0 && y2 + adj_x < vertsqs))
                             {
-                                if ((col + adj_y >= 0 && col + adj_y < horzsqs) && (row + adj_x >= 0 && row + adj_x < vertsqs))
+                                if (board[x2 + adj_y][y2 + adj_x] != MINE_VAL)
                                 {
-                                    //is the position a mine?
-                                    if (board[col + adj_y][row + adj_x] == MINE_VAL)
-                                    {
-                                        board[col][row] += 1;
-                                    }
+                                    board[x2 + adj_y][y2 + adj_x] += 1;
                                 }
                             }
                         }
                     }
                 }
             }
+            else
+            {
+                idx--;
+            }
         }
+
+        if (game_timer.isRunning())
+        {
+            game_timer.restart();
+        }
+        else
+        {
+            game_timer.start();
+        }
+
+        printBoardtoConsole();
     }
 
     private static Color buttonTextColor(int col, int row)
@@ -311,6 +370,7 @@ class MineSweeper extends JFrame implements ActionListener
                             if (button[spot].isEnabled())
                             {
                                 button[spot].setEnabled(false);
+                                //button[spot].setBorderPainted(false);
                                 --BLOCKS_LEFT;
 
                                 if (board[col + adj_y][row + adj_x] != 0)
@@ -339,12 +399,45 @@ class MineSweeper extends JFrame implements ActionListener
     {
         frame.setTitle(TitleBarDflt);
         firstClick = true;
-        placeMines(0, 0);
         resetButtons();
+        reset_clock();
         BLOCKS_LEFT = NUM_BLOCKS;
         BLOCKS_FLAGGED = 0;
         minesleft.setText("" + (NUM_MINES - BLOCKS_FLAGGED));
         flagMode = false;
+    }
+
+    private String getClockVal()
+    {
+        String clock_val;
+        if (seconds < 59 && seconds >= 0)
+        {
+            seconds++;
+        }
+        else
+        {
+            if (mins < 99 && mins >= 0)
+            {
+                seconds = 0;
+                mins++;
+            }
+            else
+            {
+                //should never be the case. Zero out the clock
+                seconds = 0;
+                mins = 0;
+            }
+        }
+
+        if (seconds > 9)
+        {
+            clock_val = mins + ":" + seconds;
+        }
+        else
+        {
+            clock_val = mins + ":0" + seconds;
+        }
+        return clock_val;
     }
 
     private static void disableAllButtons()
@@ -362,14 +455,44 @@ class MineSweeper extends JFrame implements ActionListener
         }
     }
 
+    private void show_bomb_icons()
+    {
+        for (int col = 0; col < horzsqs; col++)
+        {
+            for (int row = 0; row < vertsqs; row++)
+            {
+                int localCheck = calcSpot(col, row);
+                if (board[col][row] == MINE_VAL && button[localCheck].isEnabled() && !(button[localCheck].getName().equals("redFlag")))
+                {
+                    button[localCheck].setIcon(bombicon);
+                    button[localCheck].setOpaque(false);
+                    button[localCheck].setContentAreaFilled(true);
+                    button[localCheck].setBorderPainted(false);
+                    button[localCheck].setName("bomb");
+                }
+            }
+        }
+    }
+
+    private static void reset_clock()
+    {
+        mins = 0;
+        seconds = 0;
+        game_timer.stop();
+        gameTimer.setText("0:00");
+    }
+
     private static void resetButtons()
     {
         for (int idx = 0; idx < NUM_BLOCKS; idx++)
         {
             button[idx].setEnabled(true);
+            //button[idx].setBorderPainted(true);
             button[idx].setText("");
             button[idx].setName("noFlag");
             button[idx].setIcon(null);
+            button[idx].setOpaque(false);
+            button[idx].setBorderPainted(true);
         }
     }
 
@@ -395,6 +518,9 @@ class MineSweeper extends JFrame implements ActionListener
                             if (button[q].isEnabled() && !(button[q].getName().equals("redFlag")))
                             {
                                 button[q].setIcon(greyflagicon);
+                                button[q].setOpaque(false);
+                                button[q].setContentAreaFilled(true);
+                                button[q].setBorderPainted(false);
                                 button[q].setName("greyFlag");
                             }
                         }
@@ -409,6 +535,9 @@ class MineSweeper extends JFrame implements ActionListener
                             if (button[z].isEnabled() && button[z].getName().equals("greyFlag"))
                             {
                                 button[z].setIcon(null);
+                                button[z].setOpaque(false);
+                                button[z].setContentAreaFilled(false);
+                                button[z].setBorderPainted(true);
                             }
                         }
                     }
@@ -450,9 +579,11 @@ class MineSweeper extends JFrame implements ActionListener
                         if (board[i][j] == MINE_VAL)
                         {
                             frame.setTitle("Loser!!!!");
+                            game_timer.stop();
                             pop = end_msg.getPopup(frame, LoseGamePanel, (win_x_pos + (int) (win_x_size / 2.0) - (lossLabel_wid / 2)), (win_y_pos + (int) (win_y_size / 2.0)) - (lossLabel_hght / 2));
                             pop.show();
                             popUpOpen = true;
+                            show_bomb_icons();
                         }
                         else
                         {
@@ -461,11 +592,13 @@ class MineSweeper extends JFrame implements ActionListener
                                 button[spot].setText(Integer.toString(board[i][j]));
                                 button[spot].setForeground(buttonTextColor(i, j));
                                 button[spot].setEnabled(false);
+                                //button[spot].setBorderPainted(false);
                                 --BLOCKS_LEFT;
                             }
                             else
                             {
                                 button[spot].setEnabled(false);
+                                //button[spot].setBorderPainted(false);
                                 --BLOCKS_LEFT;
                                 expandAdjacentZeros(i, j);
                             }
@@ -477,6 +610,9 @@ class MineSweeper extends JFrame implements ActionListener
                     if (!(button[spot].getName().equals("redFlag")))
                     {
                         button[spot].setIcon(redflagicon);
+                        button[spot].setOpaque(false);
+                        button[spot].setContentAreaFilled(true);
+                        button[spot].setBorderPainted(false);
                         BLOCKS_FLAGGED++;
                         minesleft.setText("" + (NUM_MINES - BLOCKS_FLAGGED));
                         button[spot].setName("redFlag");
@@ -484,6 +620,9 @@ class MineSweeper extends JFrame implements ActionListener
                     else
                     {
                         button[spot].setIcon(greyflagicon);
+                        button[spot].setOpaque(false);
+                        button[spot].setContentAreaFilled(true);
+                        button[spot].setBorderPainted(false);
                         BLOCKS_FLAGGED--;
                         minesleft.setText("" + (NUM_MINES - BLOCKS_FLAGGED));
                         button[spot].setName("greyFlag");
@@ -496,6 +635,7 @@ class MineSweeper extends JFrame implements ActionListener
                     pop.show();
                     popUpOpen = true;
                     frame.setTitle("Winner!!!!");
+                    game_timer.stop();
                 }
                 break;
         }
@@ -504,11 +644,16 @@ class MineSweeper extends JFrame implements ActionListener
 
 // TODO:
 //      - Implement flag mode functionality
-//          - Button flags (in flag mode) are sized a little too large but displaying none the less.
 //          - Size icon larger?  also change/get rid of background behind image icon? currently is white. Makes icon look bad
-//      - Get game clock working. Currently just blank slate.
+//              - WHY DOES IMAGEICON use white when the values are transparent/nonexistant.
+//              - possible solution is to tweak with:    button[q].setOpaque(bool);
+//                                                       button[q].setContentAreaFilled(bool);
+//                                                       button[q].setBorderPainted(bool);
+//              - this seems to have gotten the transparent icon we're looking for but the edges of the buttons are gone.
+//      - Pressed 0 Buttons should not have borders of button painted? or paint the borders with a lighter opacity?
+//          - setBorderPainted(false) just leads to big open empty areas and 3 dots for adjacency number text
+//          - could this be solved by making enabled buttons borders thicker and disabled ones thinner? cause more of a visual separation?
 //      - fix button text color to represent the numbers.... not displaying anything but gray. This might be solved by Java LookAndFeel(?)
-//      - When Game over(win/loss) display bomb locations buttons with bomb icon. Leave all other squares as is, change icons of incorrectly flagged bombs to X's(?)
 //      - clicking non-enabled numbered blocks in flag mode presses all adjacent enabled squares
 //      - options menu? difficulty settings? Opening menu?
 //          - handled as a popmenu???? breaking everything else?
